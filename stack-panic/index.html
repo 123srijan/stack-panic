@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Stack Panic — Addictive Tower Stacking Arcade</title>
+  <meta name="description" content="Slide, trim, and stack to touch the stars! A fast-paced, cheerful browser stacking mini-game with daily challenges and streak combos.">
+  <meta name="theme-color" content="#4F46E5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="game-app" class="game-app">
+    <!-- Top Bar Navigation & Controls -->
+    <header class="top-nav" role="banner">
+      <div class="logo-group">
+        <h1 class="game-logo" aria-label="Stack Panic">
+          <span class="logo-stack">STACK</span>
+          <span class="logo-panic">PANIC!</span>
+        </h1>
+        <div class="mode-pill-container" role="tablist" aria-label="Game Modes">
+          <button id="btn-mode-classic" class="mode-pill active" role="tab" aria-selected="true" aria-controls="game-canvas">Classic</button>
+          <button id="btn-mode-daily" class="mode-pill" role="tab" aria-selected="false" aria-controls="game-canvas">
+            <span class="daily-badge">Daily</span>
+            <span id="daily-date-label">Today</span>
+          </button>
+        </div>
+
+        <!-- Difficulty Level Selector -->
+        <div class="difficulty-bar" role="radiogroup" aria-label="Game Difficulty">
+          <button id="btn-diff-easy" class="diff-pill" role="radio" aria-checked="false" title="Easy: Wider blocks, gentler speed & guide lines">🌱 Easy</button>
+          <button id="btn-diff-medium" class="diff-pill active" role="radio" aria-checked="true" title="Medium: Standard balanced arcade">⚡ Medium</button>
+          <button id="btn-diff-hard" class="diff-pill" role="radio" aria-checked="false" title="Hard: Fast speed & razor tolerances">🔥 Hard</button>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btn-sound-toggle" class="icon-button" aria-label="Toggle sound" title="Toggle sound (M)">
+          <svg id="icon-sound-on" class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+          </svg>
+          <svg id="icon-sound-off" class="header-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <line x1="23" y1="9" x2="17" y2="15"></line>
+            <line x1="17" y1="9" x2="23" y2="15"></line>
+          </svg>
+        </button>
+
+        <button id="btn-help-toggle" class="icon-button" aria-label="How to play and stats" title="Rules and Stats (?)">
+          <svg class="header-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Game Viewport -->
+    <main class="game-viewport" id="game-container">
+      <canvas id="game-canvas" width="440" height="720" role="img" aria-label="Stack Panic playable game screen"></canvas>
+
+      <!-- Heads-Up Display (Live In-Game Score & Streaks) -->
+      <div id="hud-overlay" class="hud-overlay" aria-live="polite">
+        <div class="hud-top">
+          <div class="score-display">
+            <span class="score-label">HEIGHT</span>
+            <span id="current-score" class="score-num">0</span>
+          </div>
+          <div class="diff-tag-hud" id="hud-diff-tag">
+            <span id="hud-diff-icon">⚡</span>
+            <span id="hud-diff-label">MEDIUM</span>
+          </div>
+          <div class="best-display">
+            <span class="best-label" id="hud-best-label">BEST</span>
+            <span id="hud-best-score" class="best-num">0</span>
+          </div>
+        </div>
+
+        <div id="streak-banner" class="streak-banner hidden">
+          <span class="streak-fire">🔥</span>
+          <span id="streak-text" class="streak-text">PERFECT x3!</span>
+        </div>
+      </div>
+
+      <!-- First Run / Start Hint Overlay -->
+      <div id="start-hint-overlay" class="start-hint-overlay">
+        <div class="hint-card">
+          <div class="hint-pulse-ring"></div>
+          <div class="hint-badge">
+            <span class="hint-icon">👆</span>
+            <span class="hint-title">Tap or Press Space to Drop!</span>
+          </div>
+          <p class="hint-subtext">Align blocks precisely. Overhang is sliced off!</p>
+        </div>
+      </div>
+
+      <!-- Game Over Modal Overlay -->
+      <div id="game-over-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+        <div class="modal-card">
+          <div class="card-glow"></div>
+          
+          <div class="verdict-avatar" id="verdict-avatar">🏗️</div>
+          <h2 id="game-over-title" class="verdict-headline">Tower Toppled!</h2>
+          <p id="verdict-quote" class="verdict-quote">The laws of physics have spoken.</p>
+
+          <!-- Score summary grid -->
+          <div class="score-summary-grid">
+            <div class="stat-box primary">
+              <span class="stat-label">SCORE</span>
+              <span id="gameover-final-score" class="stat-value">0</span>
+              <span id="new-best-badge" class="badge-ribbon hidden">NEW BEST!</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label" id="label-gameover-best">PERSONAL BEST</span>
+              <span id="gameover-best-score" class="stat-value">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">MAX STREAK</span>
+              <span id="gameover-streak" class="stat-value">0 🔥</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">PERFECT SLICES</span>
+              <span id="gameover-perfects" class="stat-value">0</span>
+            </div>
+          </div>
+
+          <!-- Daily Banner (if playing daily) -->
+          <div id="daily-result-banner" class="daily-result-banner hidden">
+            <span>📅 Today’s Challenge Rank:</span>
+            <strong id="daily-rank-tag">Master Stacker</strong>
+          </div>
+
+          <!-- Difficulty switcher in Game Over modal -->
+          <div class="modal-difficulty-row">
+            <span class="modal-diff-label">DIFFICULTY:</span>
+            <div class="diff-modal-pills">
+              <button id="btn-modal-diff-easy" class="diff-pill-sm">🌱 Easy</button>
+              <button id="btn-modal-diff-medium" class="diff-pill-sm active">⚡ Medium</button>
+              <button id="btn-modal-diff-hard" class="diff-pill-sm">🔥 Hard</button>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="modal-actions">
+            <button id="btn-play-again" class="btn btn-primary btn-large" autofocus>
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="1 4 1 10 7 10"></polyline>
+                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+              </svg>
+              <span>Play Again</span>
+              <kbd class="key-shortcut">Space</kbd>
+            </button>
+
+            <button id="btn-challenge-friend" class="btn btn-secondary">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+              <span>Challenge a Friend</span>
+            </button>
+
+            <button id="btn-switch-mode" class="btn btn-tertiary">
+              <span id="switch-mode-text">Switch to Daily Challenge</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- How to Play & Stats Modal -->
+      <div id="help-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+        <div class="modal-card">
+          <button id="btn-close-help" class="modal-close-btn" aria-label="Close help">&times;</button>
+          <h2 id="help-modal-title" class="modal-title">How to Play &amp; Stats</h2>
+          
+          <div class="help-section">
+            <h3>Rules of Stack Panic</h3>
+            <ul class="help-list">
+              <li><strong>Drop:</strong> Tap, click, or hit <kbd>Space</kbd> to drop the sliding block onto the tower.</li>
+              <li><strong>Trimming:</strong> Any overhang gets sliced right off. The tower gets narrower with every sloppy drop!</li>
+              <li><strong>Perfect Landings:</strong> Align blocks perfectly to build combos, earn bonus points, and recover lost block width!</li>
+              <li><strong>Difficulty Modes:</strong> <strong>🌱 Easy</strong> has wider blocks, gentler speed, and laser alignment guides. <strong>⚡ Medium</strong> is standard arcade balance. <strong>🔥 Hard</strong> challenges you with narrow blocks and blazing acceleration!</li>
+              <li><strong>Daily Challenge:</strong> Compete on the exact same seeded block sequence as everyone else around the world today.</li>
+            </ul>
+          </div>
+
+          <div class="help-section">
+            <h3>Difficulty High Scores</h3>
+            <div class="career-stats-grid">
+              <div class="career-stat-card">
+                <span class="c-stat-label">🌱 Easy Record</span>
+                <span id="c-easy-best" class="c-stat-val">0</span>
+              </div>
+              <div class="career-stat-card">
+                <span class="c-stat-label">⚡ Medium Record</span>
+                <span id="c-medium-best" class="c-stat-val">0</span>
+              </div>
+              <div class="career-stat-card">
+                <span class="c-stat-label">🔥 Hard Record</span>
+                <span id="c-hard-best" class="c-stat-val">0</span>
+              </div>
+              <div class="career-stat-card">
+                <span class="c-stat-label">🏆 All-Time Best</span>
+                <span id="c-best-score" class="c-stat-val">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="help-section">
+            <h3>Career Stats</h3>
+            <div class="career-stats-grid">
+              <div class="career-stat-card">
+                <span class="c-stat-label">Games Played</span>
+                <span id="c-games-played" class="c-stat-val">0</span>
+              </div>
+              <div class="career-stat-card">
+                <span class="c-stat-label">Blocks Stacked</span>
+                <span id="c-blocks-stacked" class="c-stat-val">0</span>
+              </div>
+              <div class="career-stat-card">
+                <span class="c-stat-label">Perfect Drops</span>
+                <span id="c-perfect-drops" class="c-stat-val">0</span>
+              </div>
+              <div class="career-stat-card">
+                <span class="c-stat-label">Max Streak</span>
+                <span id="c-max-streak" class="c-stat-val">0 🔥</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="btn-done-help" class="btn btn-primary">Got It!</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Feedback Notifications -->
+      <div id="toast-notification" class="toast-notification hidden" role="status" aria-live="assertive">
+        <span id="toast-message">Copied challenge to clipboard! 📋</span>
+      </div>
+    </main>
+
+    <!-- Footer Quick Controls & Info -->
+    <footer class="game-footer">
+      <span class="footer-hint">Controls: <kbd>Space</kbd> or <strong>Tap Screen</strong> to Drop &bull; <kbd>R</kbd> Restart &bull; <kbd>M</kbd> Mute</span>
+    </footer>
+  </div>
+
+  <script src="gameService.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
